@@ -15,35 +15,61 @@ import {
   Cell,
 } from "recharts";
 
-interface CrimeSummary {
-  YEAR: number;
-  "TOTAL IPC CRIMES": number;
-}
-
 export default function IPCCrimeDashboard() {
-  const [data, setData] = useState<CrimeSummary[]>([]);
+  const [years, setYears] = useState<number[]>([]);
+  const [states, setStates] = useState<string[]>([]);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [selectedState, setSelectedState] = useState<string>("");
+
+  const [districtData, setDistrictData] = useState<any[]>([]);
+  const [crimeTotals, setCrimeTotals] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
+  /* 🔹 Load filters */
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/api/crime/summary")
-      .then((res) => {
-        if (!res.ok) throw new Error("API error");
-        return res.json();
-      })
-      .then((json) => {
-        setData(json || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    fetch("http://127.0.0.1:5000/api/ipc/records")
+      .then((res) => res.json())
+      .then((data) => {
+        setYears(data.available_years);
+        setStates(data.available_states);
+
+        if (data.available_years.length)
+          setSelectedYear(data.available_years[0]);
+
+        if (data.available_states.length)
+          setSelectedState(data.available_states[0]);
+      });
   }, []);
 
-  /* 🔹 Prepare chart data */
-  const barData = data.slice(-10);
+  /* 🔹 Load analytics */
+  useEffect(() => {
+    if (!selectedYear || !selectedState) return;
 
-  const pieData = data.map((d) => ({
-    name: String(d.YEAR),
-    value: d["TOTAL IPC CRIMES"],
-  }));
+    setLoading(true);
+
+    Promise.all([
+      fetch(
+        `http://127.0.0.1:5000/api/ipc/dashboard?year=${selectedYear}&state=${encodeURIComponent(
+          selectedState
+        )}`
+      ).then((r) => r.json()),
+
+      fetch(
+        `http://127.0.0.1:5000/api/ipc/districts?year=${selectedYear}&state=${encodeURIComponent(
+          selectedState
+        )}`
+      ).then((r) => r.json()),
+    ]).then(([dashboard, districts]) => {
+      setCrimeTotals(dashboard.crime_totals || {});
+      setDistrictData(districts || []);
+      setLoading(false);
+    });
+  }, [selectedYear, selectedState]);
+
+  /* 🔹 Pie Data */
+  const pieData = Object.entries(crimeTotals)
+    .filter(([_, value]) => value > 0)
+    .map(([name, value]) => ({ name, value }));
 
   const COLORS = [
     "#ff9933",
@@ -60,28 +86,60 @@ export default function IPCCrimeDashboard() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
 
+      {/* FULL WIDTH */}
       <div className="flex-1 py-10 w-full px-6">
         <h1 className="text-3xl text-[#1a2847] mb-2">
           IPC Crime Trends Dashboard
         </h1>
         <p className="text-gray-600 mb-6">
-          Year-wise IPC crime analytics (NCRB dataset)
+          District-wise & crime-type IPC analytics (NCRB dataset)
         </p>
+
+        {/* FILTERS */}
+        <div className="flex gap-4 mb-6">
+          <select
+            className="border p-2 rounded"
+            value={selectedYear ?? ""}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedYear(Number(e.target.value))}
+            aria-label="Select year"
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="border p-2 rounded"
+            value={selectedState}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedState(e.target.value)}
+            aria-label="Select state"
+          >
+            {states.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {loading && <p>Loading analytics…</p>}
 
-        {!loading && data.length > 0 && (
+        {!loading && (
           <>
-            {/* 🔥 YEAR-WISE BAR CHART */}
+            {/* 🔥 DISTRICT BAR CHART */}
             <Card className="mb-10">
               <CardHeader className="bg-[#1a2847] text-white">
-                <CardTitle>IPC Crimes by Year</CardTitle>
+                <CardTitle>
+                  Top Districts by IPC Crimes – {selectedState}
+                </CardTitle>
               </CardHeader>
               <CardContent style={{ height: 420 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={barData}>
+                  <BarChart data={districtData.slice(0, 10)}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="YEAR" />
+                    <XAxis dataKey="DISTRICT" />
                     <YAxis />
                     <Tooltip />
                     <Bar dataKey="TOTAL IPC CRIMES" fill="#ff9933" />
@@ -90,39 +148,65 @@ export default function IPCCrimeDashboard() {
               </CardContent>
             </Card>
 
-            {/* 🔥 PIE CHART */}
+            {/* 🔥 PIE + CRIME LIST */}
             <Card>
               <CardHeader className="bg-[#1a2847] text-white">
-                <CardTitle>Crime Distribution by Year</CardTitle>
+                <CardTitle>
+                  Crime Type Distribution – {selectedState}
+                </CardTitle>
               </CardHeader>
-              <CardContent style={{ height: 360 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      dataKey="value"
-                      nameKey="name"
-                      outerRadius={140}
-                    >
-                      {pieData.map((_, i) => (
-                        <Cell
-                          key={i}
-                          fill={COLORS[i % COLORS.length]}
+
+              <CardContent>
+                {/* PIE */}
+                <div className="h-[360px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        dataKey="value"
+                        nameKey="name"
+                        outerRadius={140}
+                      >
+                        {pieData.map((_, i) => (
+                          <Cell
+                            key={i}
+                            fill={COLORS[i % COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* 🔥 BIG CRIME LIST */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
+                  {pieData.map((crime, index) => {
+                    const color = COLORS[index % COLORS.length];
+                    return (
+                      <div
+                        key={crime.name}
+                        className="flex items-center gap-3 border rounded-lg p-3 bg-gray-50"
+                      >
+                        <span
+                          className="w-4 h-4 rounded-full inline-block"
+                          style={{ backgroundColor: color }}
                         />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                      <div>
+                        <p className="font-semibold text-[#1a2847] text-sm">
+                          {crime.name}
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          {crime.value.toLocaleString()} cases
+                        </p>
+                      </div>
+                    </div>
+                  );
+                  })}
+                </div>
               </CardContent>
             </Card>
           </>
-        )}
-
-        {!loading && data.length === 0 && (
-          <p className="text-gray-500">
-            No IPC crime data available.
-          </p>
         )}
       </div>
 
@@ -130,3 +214,4 @@ export default function IPCCrimeDashboard() {
     </div>
   );
 }
+
