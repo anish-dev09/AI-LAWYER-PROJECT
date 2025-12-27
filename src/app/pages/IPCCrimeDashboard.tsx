@@ -15,6 +15,15 @@ import {
   Cell,
 } from "recharts";
 
+// Color indicator component - using SVG to avoid inline style linting
+const ColorIndicator = ({ color }: { color: string }) => {
+  return (
+    <svg className="w-4 h-4 inline-block" viewBox="0 0 16 16">
+      <circle cx="8" cy="8" r="8" fill={color} />
+    </svg>
+  );
+};
+
 export default function IPCCrimeDashboard() {
   const [years, setYears] = useState<number[]>([]);
   const [states, setStates] = useState<string[]>([]);
@@ -188,20 +197,17 @@ export default function IPCCrimeDashboard() {
                         key={crime.name}
                         className="flex items-center gap-3 border rounded-lg p-3 bg-gray-50"
                       >
-                        <span
-                          className="w-4 h-4 rounded-full inline-block"
-                          style={{ backgroundColor: color }}
-                        />
-                      <div>
-                        <p className="font-semibold text-[#1a2847] text-sm">
-                          {crime.name}
-                        </p>
-                        <p className="text-xs text-gray-600">
-                          {crime.value.toLocaleString()} cases
-                        </p>
+                        <ColorIndicator color={color} />
+                        <div>
+                          <p className="font-semibold text-[#1a2847] text-sm">
+                            {crime.name}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {crime.value.toLocaleString()} cases
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  );
+                    );
                   })}
                 </div>
               </CardContent>
