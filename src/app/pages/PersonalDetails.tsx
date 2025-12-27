@@ -72,9 +72,16 @@ export default function PersonalDetails() {
                         <User className="w-16 h-16 text-gray-400" />
                       )}
                     </div>
-                    <label className="absolute bottom-0 right-0 bg-[#1a2847] text-white p-2 rounded-full cursor-pointer hover:bg-[#2a3857] transition-colors">
+                    <label htmlFor="profilePhoto" className="absolute bottom-0 right-0 bg-[#1a2847] text-white p-2 rounded-full cursor-pointer hover:bg-[#2a3857] transition-colors">
                       <Upload className="w-5 h-5" />
-                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                      <input 
+                        id="profilePhoto" 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleImageUpload} 
+                        className="hidden" 
+                        aria-label="Upload profile photo"
+                      />
                     </label>
                   </div>
                   <p className="text-sm text-gray-600 mt-3">Upload Profile Photo</p>
@@ -121,19 +128,51 @@ export default function PersonalDetails() {
                   </div>
 
                   <div className="md:col-span-2">
-                    <Label htmlFor="state">State *</Label>
+                    <Label htmlFor="state">State / Union Territory *</Label>
                     <Select required>
                       <SelectTrigger className="mt-2">
-                        <SelectValue placeholder="Select state" />
+                        <SelectValue placeholder="Select state or union territory" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="delhi">Delhi</SelectItem>
-                        <SelectItem value="maharashtra">Maharashtra</SelectItem>
-                        <SelectItem value="karnataka">Karnataka</SelectItem>
-                        <SelectItem value="tamilnadu">Tamil Nadu</SelectItem>
+                        {/* States (28) */}
+                        <SelectItem value="andhra-pradesh">Andhra Pradesh</SelectItem>
+                        <SelectItem value="arunachal-pradesh">Arunachal Pradesh</SelectItem>
+                        <SelectItem value="assam">Assam</SelectItem>
+                        <SelectItem value="bihar">Bihar</SelectItem>
+                        <SelectItem value="chhattisgarh">Chhattisgarh</SelectItem>
+                        <SelectItem value="goa">Goa</SelectItem>
                         <SelectItem value="gujarat">Gujarat</SelectItem>
+                        <SelectItem value="haryana">Haryana</SelectItem>
+                        <SelectItem value="himachal-pradesh">Himachal Pradesh</SelectItem>
+                        <SelectItem value="jharkhand">Jharkhand</SelectItem>
+                        <SelectItem value="karnataka">Karnataka</SelectItem>
+                        <SelectItem value="kerala">Kerala</SelectItem>
+                        <SelectItem value="madhya-pradesh">Madhya Pradesh</SelectItem>
+                        <SelectItem value="maharashtra">Maharashtra</SelectItem>
+                        <SelectItem value="manipur">Manipur</SelectItem>
+                        <SelectItem value="meghalaya">Meghalaya</SelectItem>
+                        <SelectItem value="mizoram">Mizoram</SelectItem>
+                        <SelectItem value="nagaland">Nagaland</SelectItem>
+                        <SelectItem value="odisha">Odisha</SelectItem>
+                        <SelectItem value="punjab">Punjab</SelectItem>
                         <SelectItem value="rajasthan">Rajasthan</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="sikkim">Sikkim</SelectItem>
+                        <SelectItem value="tamil-nadu">Tamil Nadu</SelectItem>
+                        <SelectItem value="telangana">Telangana</SelectItem>
+                        <SelectItem value="tripura">Tripura</SelectItem>
+                        <SelectItem value="uttar-pradesh">Uttar Pradesh</SelectItem>
+                        <SelectItem value="uttarakhand">Uttarakhand</SelectItem>
+                        <SelectItem value="west-bengal">West Bengal</SelectItem>
+                        
+                        {/* Union Territories (8) */}
+                        <SelectItem value="andaman-nicobar">Andaman and Nicobar Islands</SelectItem>
+                        <SelectItem value="chandigarh">Chandigarh</SelectItem>
+                        <SelectItem value="dadra-nagar-haveli-daman-diu">Dadra and Nagar Haveli and Daman and Diu</SelectItem>
+                        <SelectItem value="delhi">Delhi (NCT)</SelectItem>
+                        <SelectItem value="jammu-kashmir">Jammu and Kashmir</SelectItem>
+                        <SelectItem value="ladakh">Ladakh</SelectItem>
+                        <SelectItem value="lakshadweep">Lakshadweep</SelectItem>
+                        <SelectItem value="puducherry">Puducherry</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
