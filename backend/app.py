@@ -21,7 +21,18 @@ except ImportError:
     print("python-dotenv not installed, skipping .env load")
 
 app = Flask(__name__)
-CORS(app)
+
+# Configure CORS for production (Vercel frontend) and development
+CORS(app, resources={
+    r"/api/*": {
+        "origins": [
+            "http://localhost:5173",  # Local development
+            "http://localhost:5174",  # Alternative local port
+            "https://*.vercel.app",   # Vercel preview deployments
+            "https://*.vercel.com"    # Vercel production
+        ]
+    }
+})
 
 # ---------------- PATHS ----------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -488,5 +499,6 @@ def supreme_court_search():
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
-    app.run(debug=True, use_reloader=False)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
 

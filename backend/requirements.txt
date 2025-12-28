@@ -6,3 +6,5 @@ sentence-transformers
 faiss-cpu
 numpy
 requests
+gunicorn
+python-dotenv

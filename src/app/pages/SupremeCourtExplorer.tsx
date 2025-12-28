@@ -38,8 +38,9 @@ export default function SupremeCourtExplorer() {
     setResponse(null);
 
     try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const res = await fetch(
-        `http://127.0.0.1:5000/api/supreme-court/search?q=${encodeURIComponent(question)}`
+        `${API_URL}/api/supreme-court/search?q=${encodeURIComponent(question)}`
       );
 
       if (!res.ok) {

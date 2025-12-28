@@ -21,7 +21,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://127.0.0.1:5000/api/crime/summary')
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    fetch(`${API_URL}/api/crime/summary`)
       .then((res) => res.json())
       .then((data) => {
         setCrimeSummary(data);

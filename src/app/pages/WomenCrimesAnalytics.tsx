@@ -25,7 +25,8 @@ export default function WomenCrimesAnalytics() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/api/women/dashboard")
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    fetch(`${API_URL}/api/women/dashboard`)
       .then((res) => {
         if (!res.ok) throw new Error("API error");
         return res.json();

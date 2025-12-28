@@ -20,17 +20,19 @@ export default function LegalAwareness() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/api/legal-awareness")
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    
+    fetch(`${API_URL}/api/legal-awareness`)
       .then(res => res.json())
       .then(setRightsData)
       .catch(() => setRightsData({}));
 
-    fetch("http://127.0.0.1:5000/api/legal-faqs")
+    fetch(`${API_URL}/api/legal-faqs`)
       .then(res => res.json())
       .then(setFaqs)
       .catch(() => setFaqs([]));
 
-    fetch("http://127.0.0.1:5000/api/helplines")
+    fetch(`${API_URL}/api/helplines`)
       .then(res => res.json())
       .then(setHelplines)
       .catch(() => setHelplines([]));
