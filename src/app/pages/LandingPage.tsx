@@ -1,8 +1,121 @@
 import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import ChatPopup from '../components/ChatPopup';
 import { BookOpen, BarChart3, Gavel, Brain, Users, Building2, GraduationCap, Shield } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/card';
+
+function LegalConsultForm() {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [preferred, setPreferred] = useState("call");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState("");
+
+  const LAWYER_PHONE = "+911234567890"; // placeholder
+  const WHATSAPP_LINK = "https://wa.me/911234567890"; // placeholder
+  const CONSULT_COST = 500;
+
+  async function handleSubmit(e?: any, trigger?: string) {
+    if (e && e.preventDefault) e.preventDefault();
+    setLoading(true);
+    setSuccess("");
+
+    const payload = {
+      name,
+      phone,
+      email,
+      message,
+      preferred_method: trigger || preferred,
+      cost: CONSULT_COST
+    };
+
+    try {
+      const res = await fetch("/api/consultation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Request failed");
+      }
+
+      setSuccess("Request submitted — connecting now...");
+
+      // small delay to show success then trigger connection
+      setTimeout(() => {
+        if ((trigger || preferred) === "call") {
+          window.location.href = `tel:${LAWYER_PHONE}`;
+        } else {
+          window.open(WHATSAPP_LINK, "_blank");
+        }
+      }, 800);
+
+      setName("");
+      setPhone("");
+      setEmail("");
+      setMessage("");
+
+    } catch (err: any) {
+      setSuccess(`Failed: ${err.message || err}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={(e) => handleSubmit(e)} className="space-y-3">
+      <div>
+        <label className="text-sm text-gray-700">Full name</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} className="w-full mt-1 p-2 border rounded" placeholder="Your full name" required />
+      </div>
+
+      <div>
+        <label className="text-sm text-gray-700">Phone</label>
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full mt-1 p-2 border rounded" placeholder="Mobile number" required />
+      </div>
+
+      <div>
+        <label className="text-sm text-gray-700">Email (optional)</label>
+        <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full mt-1 p-2 border rounded" placeholder="you@example.com" />
+      </div>
+
+      <div>
+        <label className="text-sm text-gray-700">Brief message</label>
+        <textarea value={message} onChange={(e) => setMessage(e.target.value)} className="w-full mt-1 p-2 border rounded" placeholder="Describe your issue (one-liner)" />
+      </div>
+
+      <div className="flex gap-2 items-center">
+        <label className="text-sm text-gray-700">Preferred:</label>
+        <select value={preferred} onChange={(e) => setPreferred(e.target.value)} className="p-2 border rounded">
+          <option value="call">Call</option>
+          <option value="chat">Chat (WhatsApp)</option>
+        </select>
+      </div>
+
+      <div className="flex gap-3 mt-3">
+        <button type="submit" disabled={loading} className="px-4 py-2 bg-[#ff9933] text-white rounded hover:bg-[#ff8800]">
+          {loading ? "Submitting..." : `Request & ${preferred === 'call' ? 'Call' : 'Chat'}`}
+        </button>
+
+        <button type="button" disabled={loading} onClick={() => handleSubmit(undefined, 'call')} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+          Call a Lawyer
+        </button>
+
+        <button type="button" disabled={loading} onClick={() => handleSubmit(undefined, 'chat')} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          Chat with a Lawyer
+        </button>
+      </div>
+
+      {success && <div className="mt-3 text-sm text-green-700">{success}</div>}
+    </form>
+  );
+}
 
 export default function LandingPage() {
   return (
@@ -138,6 +251,46 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Legal Consulting Section */}
+      <section id="legal-consulting" className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-4xl text-center mb-6 text-[#1a2847]">Legal Consulting</h2>
+          <p className="text-center text-gray-700 max-w-3xl mx-auto mb-6">
+            Connect directly with a qualified lawyer for a private consultation. Choose a call or chat
+            and provide a few details before we connect you. Prices are shown upfront.
+          </p>
+
+          <div className="max-w-4xl mx-auto bg-gray-50 border rounded-lg p-6 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="text-xl mb-2 text-[#1a2847]">Consultation Details</h3>
+                <p className="text-sm text-gray-600 mb-4">30-minute consultation with a licensed lawyer.</p>
+
+                <div className="mb-4">
+                  <p className="text-sm text-gray-700">Price</p>
+                  <div className="text-2xl font-semibold text-[#1a2847]">₹500</div>
+                  <p className="text-xs text-gray-500">Payable before connection. Taxes may apply.</p>
+                </div>
+
+                <div className="mb-4">
+                  <p className="text-sm text-gray-700">Lawyer Credentials</p>
+                  <div className="mt-2 text-sm text-gray-600">Name: <span className="font-medium">Adv. [Placeholder]</span></div>
+                  <div className="text-sm text-gray-600">Experience: <span className="font-medium">10+ years</span></div>
+                  <div className="text-sm text-gray-600">Specialization: <span className="font-medium">Criminal & Civil</span></div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xl mb-2 text-[#1a2847]">Your Details</h3>
+                <LegalConsultForm />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <ChatPopup />
 
       {/* Ethics & Disclaimer */}
       <section id="about" className="py-16 bg-white">

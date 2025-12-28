@@ -18,11 +18,8 @@ export default function IPCAIAssistant() {
     setLoading(true);
     setSelected(null);
 
-    const res = await fetch(
-      `http://127.0.0.1:5000/api/ipc/assistant/search?q=${encodeURIComponent(
-        query
-      )}`
-    );
+    const url = `/api/ipc/assistant/search?q=${encodeURIComponent(query)}`;
+    const res = await fetch(url);
 
     const data = await res.json();
     setResults(data);
@@ -32,14 +29,11 @@ export default function IPCAIAssistant() {
   const explainSection = async (section: string) => {
     setLoading(true);
 
-    const res = await fetch(
-      "http://127.0.0.1:5000/api/ipc/assistant/explain",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ section }),
-      }
-    );
+    const res = await fetch("/api/ipc/assistant/explain", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ section }),
+    });
 
     const data = await res.json();
     setSelected(data);
