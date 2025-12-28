@@ -30,6 +30,18 @@ with open(os.path.join(DATA_DIR, "legal_faqs.json"), encoding="utf-8") as f:
 with open(os.path.join(DATA_DIR, "helplines.json"), encoding="utf-8") as f:
     helplines = json.load(f)
 
+# ---------------- SUPREME COURT SEARCH ENGINE ----------------
+# Initialize the Supreme Court semantic search engine
+supreme_court_engine = None
+
+def get_supreme_court_engine():
+    """Lazy load Supreme Court search engine to avoid startup delay"""
+    global supreme_court_engine
+    if supreme_court_engine is None:
+        from supreme_court_search import get_search_engine
+        supreme_court_engine = get_search_engine()
+    return supreme_court_engine
+
 # =======================
 # 🔥 ROOT LANDING PAGE
 # =======================
@@ -48,7 +60,8 @@ def landing():
             "/api/legal-awareness",
             "/api/legal-faqs",
             "/api/helplines",
-            "/api/case/predict"
+            "/api/case/predict",
+            "/api/supreme-court/search"
         ],
         "note": "This backend is running locally for project demonstration."
     })
@@ -199,7 +212,49 @@ def predict_case():
         )
     })
 
+# ---------------- SUPREME COURT SEARCH ----------------
+@app.route("/api/supreme-court/search", methods=["GET", "POST"])
+def supreme_court_search():
+    """
+    Semantic search endpoint for Supreme Court judgments
+    Accepts: ?q=query OR POST {"query": "..."}
+    Returns: Top 5 most relevant Supreme Court cases
+    """
+    try:
+        # Get query from GET or POST
+        if request.method == "POST":
+            data = request.get_json()
+            query = data.get("query", "").strip()
+        else:
+            query = request.args.get("q", "").strip()
+        
+        # Validate query
+        if not query:
+            return jsonify({
+                "error": "Query parameter is required",
+                "example": "/api/supreme-court/search?q=remand order validity under PMLA"
+            }), 400
+        
+        # Get search engine and perform search
+        engine = get_supreme_court_engine()
+        results = engine.search(query, top_k=5)
+        
+        # Return results
+        return jsonify({
+            "query": query,
+            "total_results": len(results),
+            "results": results,
+            "note": "All answers are derived from verified Supreme Court judgments. No legal opinions generated."
+        })
+    
+    except Exception as e:
+        return jsonify({
+            "error": "Search failed",
+            "message": str(e),
+            "note": "If this is the first request, the system is building the search index. Please wait and try again."
+        }), 500
+
 # ---------------- RUN ----------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)
 

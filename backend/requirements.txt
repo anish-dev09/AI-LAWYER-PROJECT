@@ -2,3 +2,6 @@ flask
 flask-cors
 pandas
 google-generativeai
+sentence-transformers
+faiss-cpu
+numpy
