@@ -14,12 +14,14 @@ from typing import List, Dict, Tuple
 
 
 class SupremeCourtSearchEngine:
-    def __init__(self, json_path: str = "data/supreme_court.json"):
+    def __init__(self, json_path: str = None):
         """Initialize the search engine with dataset and model"""
-        self.json_path = json_path
+        # Use absolute path based on current file location
+        base_dir = Path(__file__).parent
+        self.json_path = json_path or str(base_dir / "data" / "supreme_court.json")
         self.model_name = "sentence-transformers/all-MiniLM-L6-v2"
-        self.index_path = "data/supreme_court_index.faiss"
-        self.embeddings_path = "data/supreme_court_embeddings.pkl"
+        self.index_path = str(base_dir / "data" / "supreme_court_index.faiss")
+        self.embeddings_path = str(base_dir / "data" / "supreme_court_embeddings.pkl")
         
         # Defer initialization
         self.data = None
