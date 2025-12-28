@@ -36,7 +36,7 @@ export default function IPCCrimeDashboard() {
 
   /* 🔹 Load filters */
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/api/ipc/records")
+    fetch("/api/ipc/records")
       .then((res) => res.json())
       .then((data) => {
         setYears(data.available_years);
@@ -58,13 +58,13 @@ export default function IPCCrimeDashboard() {
 
     Promise.all([
       fetch(
-        `http://127.0.0.1:5000/api/ipc/dashboard?year=${selectedYear}&state=${encodeURIComponent(
+        `/api/ipc/dashboard?year=${selectedYear}&state=${encodeURIComponent(
           selectedState
         )}`
       ).then((r) => r.json()),
 
       fetch(
-        `http://127.0.0.1:5000/api/ipc/districts?year=${selectedYear}&state=${encodeURIComponent(
+        `/api/ipc/districts?year=${selectedYear}&state=${encodeURIComponent(
           selectedState
         )}`
       ).then((r) => r.json()),

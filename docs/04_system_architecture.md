@@ -11,7 +11,7 @@ The AI Lawyer platform follows a modern three-tier web application architecture 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         USER LAYER                              │
-│  (Web Browsers: Chrome, Firefox, Safari, Edge)                 │
+│  (Web Browsers: Chrome, Firefox, Safari, Edge)                  │
 └────────────────────────┬────────────────────────────────────────┘
                          │ HTTPS
                          ▼

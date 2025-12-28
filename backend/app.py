@@ -3,6 +3,22 @@ from flask_cors import CORS
 import pandas as pd
 import json
 import os
+from datetime import datetime
+import traceback
+
+# optional import - google generative api
+try:
+    import google.generativeai as genai
+except Exception:
+    genai = None
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    print("Loaded .env file")
+except ImportError:
+    print("python-dotenv not installed, skipping .env load")
 
 app = Flask(__name__)
 CORS(app)
@@ -12,23 +28,53 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
 # ---------------- LOAD DATA ----------------
-ipc_df = pd.read_csv(os.path.join(DATA_DIR, "ipc_crime.csv")).fillna(0)
-women_df = pd.read_csv(os.path.join(DATA_DIR, "women_crime.csv")).fillna(0)
+try:
+    ipc_df = pd.read_csv(os.path.join(DATA_DIR, "ipc_crime.csv")).fillna(0)
+    ipc_df.columns = ipc_df.columns.str.strip()
+    print(f"Loaded IPC crime data: {len(ipc_df)} rows")
+except Exception as e:
+    print(f"Error loading ipc_crime.csv: {e}")
+    ipc_df = pd.DataFrame()  # empty df
 
-ipc_df.columns = ipc_df.columns.str.strip()
-women_df.columns = women_df.columns.str.strip()
+try:
+    women_df = pd.read_csv(os.path.join(DATA_DIR, "women_crime.csv")).fillna(0)
+    women_df.columns = women_df.columns.str.strip()
+    print(f"Loaded women crime data: {len(women_df)} rows")
+except Exception as e:
+    print(f"Error loading women_crime.csv: {e}")
+    women_df = pd.DataFrame()  # empty df
 
-with open(os.path.join(DATA_DIR, "ipc_sections.json"), encoding="utf-8") as f:
-    ipc_sections = json.load(f)
+try:
+    with open(os.path.join(DATA_DIR, "ipc_sections.json"), encoding="utf-8") as f:
+        ipc_sections = json.load(f)
+    print(f"Loaded IPC sections: {len(ipc_sections)} items")
+except Exception as e:
+    print(f"Error loading ipc_sections.json: {e}")
+    ipc_sections = []
 
-with open(os.path.join(DATA_DIR, "legal_awareness.json"), encoding="utf-8") as f:
-    legal_awareness = json.load(f)
+try:
+    with open(os.path.join(DATA_DIR, "legal_awareness.json"), encoding="utf-8") as f:
+        legal_awareness = json.load(f)
+    print(f"Loaded legal awareness: {len(legal_awareness)} items")
+except Exception as e:
+    print(f"Error loading legal_awareness.json: {e}")
+    legal_awareness = []
 
-with open(os.path.join(DATA_DIR, "legal_faqs.json"), encoding="utf-8") as f:
-    legal_faqs = json.load(f)
+try:
+    with open(os.path.join(DATA_DIR, "legal_faqs.json"), encoding="utf-8") as f:
+        legal_faqs = json.load(f)
+    print(f"Loaded legal FAQs: {len(legal_faqs)} items")
+except Exception as e:
+    print(f"Error loading legal_faqs.json: {e}")
+    legal_faqs = []
 
-with open(os.path.join(DATA_DIR, "helplines.json"), encoding="utf-8") as f:
-    helplines = json.load(f)
+try:
+    with open(os.path.join(DATA_DIR, "helplines.json"), encoding="utf-8") as f:
+        helplines = json.load(f)
+    print(f"Loaded helplines: {len(helplines)} items")
+except Exception as e:
+    print(f"Error loading helplines.json: {e}")
+    helplines = []
 
 # =======================
 # 🔥 ROOT LANDING PAGE
@@ -81,6 +127,54 @@ def ipc_records():
         "available_years": sorted(ipc_df["YEAR"].unique().tolist()),
         "available_states": sorted(ipc_df["STATE/UT"].unique().tolist())
     })
+
+# ---------------- IPC DASHBOARD ----------------
+@app.route("/api/ipc/dashboard")
+def ipc_dashboard():
+    year = request.args.get("year", type=int)
+    state = request.args.get("state", "").strip()
+
+    if not year or not state:
+        return jsonify({"error": "year and state required"}), 400
+
+    # Filter data
+    filtered = ipc_df[(ipc_df["YEAR"] == year) & (ipc_df["STATE/UT"] == state)]
+
+    if filtered.empty:
+        return jsonify({"crime_totals": {}})
+
+    # Crime columns (exclude non-crime columns)
+    crime_cols = [col for col in ipc_df.columns if col not in ["STATE/UT", "DISTRICT", "YEAR", "TOTAL IPC CRIMES"]]
+
+    # Sum crimes
+    crime_totals = {}
+    for col in crime_cols:
+        total = filtered[col].sum()
+        if total > 0:
+            crime_totals[col] = int(total)
+
+    return jsonify({"crime_totals": crime_totals})
+
+# ---------------- IPC DISTRICTS ----------------
+@app.route("/api/ipc/districts")
+def ipc_districts():
+    year = request.args.get("year", type=int)
+    state = request.args.get("state", "").strip()
+
+    if not year or not state:
+        return jsonify({"error": "year and state required"}), 400
+
+    # Filter data
+    filtered = ipc_df[(ipc_df["YEAR"] == year) & (ipc_df["STATE/UT"] == state)]
+
+    if filtered.empty:
+        return jsonify([])
+
+    # Group by district, sum TOTAL IPC CRIMES
+    districts = filtered.groupby("DISTRICT")["TOTAL IPC CRIMES"].sum().reset_index()
+    districts = districts.sort_values(by="TOTAL IPC CRIMES", ascending=False).head(20)  # Top 20 districts
+
+    return jsonify(districts.to_dict(orient="records"))
 
 # ---------------- IPC SEARCH ----------------
 @app.route("/api/ipc/assistant/search")
@@ -158,6 +252,144 @@ def get_legal_faqs():
 @app.route("/api/helplines")
 def get_helplines():
     return jsonify(helplines)
+
+
+# ---------------- CONSULTATION REQUESTS ----------------
+@app.route("/api/consultation", methods=["POST"])
+def consultation_request():
+    """
+    Accepts POST with JSON:
+    { name, phone, email, preferred_method, message, cost }
+    Stores a simple record in data/consultations.json and returns success.
+    """
+    data = request.json or {}
+    name = data.get("name", "").strip()
+    phone = data.get("phone", "").strip()
+    email = data.get("email", "").strip()
+    preferred = data.get("preferred_method", "call").strip()
+    message = data.get("message", "").strip()
+    cost = data.get("cost", None)
+
+    if not name or not phone:
+        return jsonify({"error": "name and phone are required"}), 400
+
+    consult_record = {
+        "id": int(datetime.utcnow().timestamp()),
+        "name": name,
+        "phone": phone,
+        "email": email,
+        "preferred_method": preferred,
+        "message": message,
+        "cost": cost,
+        "received_at": datetime.utcnow().isoformat() + "Z"
+    }
+
+    consultations_path = os.path.join(DATA_DIR, "consultations.json")
+    try:
+        if os.path.exists(consultations_path):
+            with open(consultations_path, "r", encoding="utf-8") as f:
+                existing = json.load(f) or []
+        else:
+            existing = []
+
+        existing.append(consult_record)
+
+        with open(consultations_path, "w", encoding="utf-8") as f:
+            json.dump(existing, f, ensure_ascii=False, indent=2)
+
+    except Exception as e:
+        return jsonify({"error": "failed to save consultation", "detail": str(e)}), 500
+
+    # In a real app you might trigger an SMS/call API or notify lawyers here.
+    return jsonify({"status": "success", "message": "Consultation request received"}), 201
+
+
+# ---------------- CHAT / AI PROXY ----------------
+@app.route("/api/chat", methods=["POST"])
+def chat_proxy():
+    """
+    Proxy endpoint to forward user messages to Gemini / Google Generative API.
+    Expects JSON: { message: string, history?: [{role:'user'|'assistant', content: string}] }
+    Reads GEMINI_API_KEY (or GOOGLE_API_KEY) and GEMINI_MODEL from environment.
+    """
+    data = request.json or {}
+    message = data.get("message", "").strip()
+    history = data.get("history", [])
+
+    if not message:
+        return jsonify({"error": "message is required"}), 400
+
+    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    model = os.environ.get("GEMINI_MODEL") or os.environ.get("GOOGLE_MODEL") or "models/gemini-1.0"
+
+    if not api_key:
+        return jsonify({"error": "GEMINI_API_KEY not set on server"}), 500
+
+    try:
+        # prefer official library if available
+        if genai is not None:
+            genai.configure(api_key=api_key)
+            # build messages in expected format
+            msgs = []
+            for h in history:
+                role = h.get("role", "user")
+                content = h.get("content", "")
+                msgs.append({"author": role, "content": [{"type": "text","text": content}]})
+
+            msgs.append({"author": "user", "content": [{"type": "text", "text": message}]})
+
+            resp = genai.chat.create(model=model, messages=msgs)
+            # try to extract text
+            reply = ""
+            try:
+                for part in resp.output:
+                    if isinstance(part, dict) and part.get("content"):
+                        for c in part.get("content"):
+                            if c.get("type") == "text":
+                                reply += c.get("text", "")
+                    elif isinstance(part, str):
+                        reply += part
+            except Exception:
+                # fallback
+                reply = str(resp)
+
+            return jsonify({"reply": reply})
+
+        # fallback to REST HTTP call
+        import requests
+        url = f"https://generativelanguage.googleapis.com/v1beta2/{model}:generateMessage?key={api_key}"
+        payload = {
+            "messages": [
+                *[{"author": {"role": h.get("role", "user")}, "content": [{"type":"text","text": h.get("content","")}] } for h in history],
+                {"author": {"role": "user"}, "content": [{"type":"text","text": message}]}
+            ]
+        }
+        r = requests.post(url, json=payload, timeout=30)
+        r.raise_for_status()
+        jr = r.json()
+        # extract text reply heuristically
+        reply = ""
+        try:
+            # older API names
+            if "candidates" in jr:
+                for c in jr.get("candidates", []):
+                    reply += c.get("content", "")
+            elif "output" in jr:
+                for item in jr.get("output", []):
+                    if isinstance(item, dict) and item.get("content"):
+                        for c in item.get("content"):
+                            if c.get("type") == "text":
+                                reply += c.get("text", "")
+            else:
+                reply = jr.get("response", "") or str(jr)
+        except Exception:
+            reply = str(jr)
+
+        return jsonify({"reply": reply})
+
+    except Exception as e:
+        tb = traceback.format_exc()
+        return jsonify({"error": "chat failed", "detail": str(e), "trace": tb}), 500
 
 # ---------------- CASE OUTCOME ----------------
 @app.route("/api/case/predict", methods=["POST"])

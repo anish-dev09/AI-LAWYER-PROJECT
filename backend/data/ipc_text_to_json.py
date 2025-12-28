@@ -2,7 +2,7 @@ import re
 import json
 
 with open(
-    "C:\\Users\\Mandeep\\OneDrive\\Documents\\Again final project Lawyer\\backend\\data\\ipc_full_text.txt",
+    "ipc_full_text.txt",
     "r",
     encoding="utf-8"
 ) as f:
